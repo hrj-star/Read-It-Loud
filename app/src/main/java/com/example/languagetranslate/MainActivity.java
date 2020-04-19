@@ -2,21 +2,33 @@ package com.example.languagetranslate;
 
 import android.os.Bundle;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.android.material.snackbar.Snackbar;
-
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import android.view.View;
+import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.speech.tts.TextToSpeech;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.util.Log;
-import android.widget.EditText;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.core.app.ActivityCompat;
+
+
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.parser.PdfTextExtractor;
+
+import java.io.IOException;
+import java.util.Locale;
+
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.ml.common.modeldownload.FirebaseModelDownloadConditions;
@@ -28,30 +40,122 @@ import com.google.firebase.ml.naturallanguage.translate.FirebaseTranslatorOption
 
 public class MainActivity extends AppCompatActivity {
 
-    EditText text;
-    TextView englishText;
+
+    TextView hindiText;
+    String stringParser;
+
+
+    private static final int READ_REQUEST_CODE = 42;
+    private static final String PRIMARY = "primary";
+    //private static final String LOCAL_STORAGE = "/storage/self/primary/"; // varies from device to device
+    //private static final String EXT_STORAGE = "/storage/7764-A034/";  // varies from device to device
+    private static final String COLON = ":";
+
+    private Intent intent;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        text = findViewById(R.id.enter_text);
-        englishText = findViewById(R.id.translatedText);
+        hindiText = findViewById(R.id.translatedText);
+
+        final Button fab = findViewById(R.id.upload);
+
+
+        /* getting user permission for external storage */
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE}, PackageManager.PERMISSION_GRANTED);
+
+        fab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.setType("*/*");
+                startActivityForResult(intent, READ_REQUEST_CODE);
+            }
+        });
+
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+        super.onActivityResult(requestCode, resultCode, resultData);
+        if(requestCode == READ_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            if(resultData != null) {
+                Uri uri = resultData.getData();
+                Toast.makeText(this,"File Uploaded Successfully !", Toast.LENGTH_SHORT).show();
+                Log.v("URI", uri.getPath());
+                readPdfFile(uri);
+            }
+        }
+    }
+
+    public void readPdfFile(Uri uri) {
+        String fullPath;
+        //convert from uri to full path
+        if(uri.getPath().contains(PRIMARY)) {
+
+            fullPath = uri.getPath().split(COLON)[1];//varies from device to device , also LOCAL_STORAGE + uri.getPath().split(COLON)[1];
+        }
+        else {
+            fullPath = uri.getPath().split(COLON)[1];//varies from device to device ,also EXT_STORAGE + uri.getPath().split(COLON)[1];
+
+        }
+        Log.v("URI", uri.getPath()+" "+fullPath);
+
+        try {
+            PdfReader pdfReader = new PdfReader(fullPath);
+            stringParser = PdfTextExtractor.getTextFromPage(pdfReader, 1).trim();
+            pdfReader.close();
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+    }
+
+
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+
+        int id = item.getItemId();
+
+        if (id == R.id.action_settings) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+
     public void translate(View v) {
-        translateTextToEnglish(text.getText().toString());
+        translateTextToHindi(stringParser);
     }
 
     public void translateText(FirebaseTranslator langTranslator) {
-        //translate source text to english
-        langTranslator.translate(text.getText().toString())
+        //translate source text to hindi
+        langTranslator.translate(stringParser)
                 .addOnSuccessListener(
                         new OnSuccessListener<String>() {
                             @Override
                             public void onSuccess(@NonNull String translatedText) {
-                                englishText.setText(translatedText);
+                                Intent intent = new Intent(MainActivity.this,Output_Translated.class);
+                                intent.putExtra("text",translatedText);
+                                startActivity(intent);
+                                finish();
+
                             }
                         })
                 .addOnFailureListener(
@@ -75,7 +179,7 @@ public class MainActivity extends AppCompatActivity {
         FirebaseTranslatorOptions options =
                 new FirebaseTranslatorOptions.Builder()
                         .setSourceLanguage(sourceLanguage)
-                        .setTargetLanguage(FirebaseTranslateLanguage.EN)
+                        .setTargetLanguage(FirebaseTranslateLanguage.HI)
                         .build();
         final FirebaseTranslator langTranslator =
                 FirebaseNaturalLanguage.getInstance().getTranslator(options);
@@ -106,7 +210,7 @@ public class MainActivity extends AppCompatActivity {
                         });
     }
 
-    public void translateTextToEnglish(String text) {
+    public void translateTextToHindi(String text) {
         //First identify the language of the entered text
         FirebaseLanguageIdentification languageIdentifier =
                 FirebaseNaturalLanguage.getInstance().getLanguageIdentification();
