@@ -9,7 +9,9 @@
 </div> 
 
 ## Motivation:
+
  * The Android App can be used by specially abled people , they can open the  pdf and its reads out  the translated words.
+ * Interactive short story reader app for small children translated in native languages.
 
 ## Features:
 
@@ -28,8 +30,9 @@
 ![](./screenshots/output_gif.gif)
 
 ## Future Scope
+
 * [ ] Can import all the pdf files into app and translate them.
-* [ ] Create registration ,session based logins for different users and maintain individial user files.
+* [ ] Create registration ,session based logins for different users and maintain individual user files.
 * [ ] Create an array of all languages using Firebase ML Kit and translate vice-versa.
 * [ ] Implement tts for various languages.
 
